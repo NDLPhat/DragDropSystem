@@ -3,67 +3,64 @@ import Container from "./Container";
 
 export default class DragDropFactory {
   constructor(config) {
-    console.log(config, "config");
     this.config = config;
-    this.x = null;
-    this.y = null;
+    this.offsetX = null;
+    this.offsetY = null;
+    this.curX = null;
+    this.curY = null;
+
     // super("!", config);
   }
 
   init() {
     var self = this;
 
-    this.group.containers.map((item) => {
-      const { el } = item;
-      console.log(item.el);
-      $(el).on("mousedown", function (e) {
-        console.log(e.clientX, "mousedown");
+    this.containers.map((item) => {
+      const curContainer = item;
+      const curItem = item.items;
+      const curGroup = item.group;
+      console.log("ok: ", curItem.makeNewGroup())
+      $(curContainer.el).on("mousemove", function (e) {
+        if (curItem.isStartMove) curItem.moveAt(e.clientX - self.curX, e.clientY - self.curY);
+        console.log(e.clientX, self.curX, e.clientY, self.curY);
       })
-      $(el).on("touchstart", function (e) {
-        self.x = $(e.target).offset().left - el.left;
-        self.y = $(e.target).offset().top - el.top;
-        console.log($(e.target).offset().left, item.left, $(el), "start");
-        // if ($(e.target))
-        // const left = $(e.target).offset().left;
-        // const right = $(e.target).offset().left + $(e.target).outerWidth();
 
-        // const top = console.log("touchstart: ");
-      });
+      $(curContainer.el).on("mouseup", function (e) {
+        curItem.startMove(false);
+        $(curItem.el).removeClass("active1");
+        $(curGroup.el).removeClass("active");
+        self.curX = null;
+        self.curY = null;
+        self.offsetX = null;
+        self.offsetY = null;
 
-      $(el).on("touchend", function (e) {
+        console.log(e.clientX, e.clientY, "mouseup");
+      })
 
-      });
-
-      $(el).on("touchmove", function (e) {
-        console.log($(e.target).offset().left, $(e.target).offset().top, "move");
-        el.moveAt($(e.target).offset().left - self.x, $(e.target).offset().top - self.y);
-        // console.log("touchmove: ", e.touches[0].clientX, e.touches[0].clientY);
-      });
+      $(curContainer.el).on("mousedown", function (e) {
+        $(curItem.el).addClass("active1");
+        $(curGroup.el).addClass("active");
+        curItem.startMove(true);
+        self.curX = e.clientX + $(curContainer.el).offset().left - curItem.left;
+        self.curY = e.clientY + $(curContainer.el).offset().top - curItem.top;
+        console.log(self.curX, $(curContainer.el).offset().left, curItem.left, "mouseup");
+      })
     });
-
-    // $(document.body).on("mouseup", function(event) {
-    //   console.log("mouseup:", event.clientX, event.clientY);
-    // });
-    // $(document.body).on("mousedown", function(event) {
-    //   console.log("mousedown:", event.clientX, event.clientY);
-    // });
-    // $(document.body).on("mousemove", function(event) {
-    //   console.log("mousemove:", event.clientX, event.clientY);
-    // });
-    // $(document.body).on("dragover", function(evt) {
-    //   var x = evt.pageX;
-    //   var y = evt.pageY;
-    //   console.log(x, y);
-    // });
   }
 
   get group() {
-    const group = $(".group.active");
-    console.log(group, "Group");
-    return new Group(group, this.config);
+    var groups = [];
+    $(".group").map((index, item) => {
+      groups.push(new Group(item, this.config));
+    });
+    return groups;
   }
 
-  container() {
-    $(".active1");
+  get containers() {
+    var containers = [];
+    $(".container").map((index, item) => {
+      containers.push(new Container(item, this.config));
+    });
+    return containers;
   }
 }

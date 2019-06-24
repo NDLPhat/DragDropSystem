@@ -1,12 +1,18 @@
 import DrapDropGeneral from "./DrapDropGeneral";
+import Group from "./Group";
+import Item from "./Item"
 
 export default class Container extends DrapDropGeneral {
-  constructor(el, config) {
-    super(el, config);
-  }
+    constructor(el, config) {
+        super(el, config);
+    }
 
-  moveAt(x, y) {
-    $(this.el).css({ "position": "relative", "top": y, left: x });
-  }
+    get items() {
+        return new Item($(this.el).find(".item").get(0), this.config);
+    }
+
+    get group() {
+        if ($(this.el).parent().is(".group")) return new Group($(this.el).parent().get(0), this.config);
+    }
 
 }
