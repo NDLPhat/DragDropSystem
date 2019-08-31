@@ -50,7 +50,12 @@ class Group extends extendDrag{
 	}
 
 	get items(){
-		return $(this.el).find("." + this.config.item);
+		var _items = [];
+		var self = this;
+		$(this.el).find("." + this.config.item).each(function(){
+			_items.push(new Item(self.fact, this));
+		});
+		return _items;
 	}
 
 	get isHover(){
@@ -58,7 +63,6 @@ class Group extends extendDrag{
 		// TH1: 
 		var item = this.fact.item;
 		var xCount = 0, yCount = 0;
-		console.log(item, this);
 		if (item.right > this.left && item.right < this.right) xCount++;
 
 		if (item.left < this.right && item.left > this.left) xCount++;
@@ -77,6 +81,32 @@ class Group extends extendDrag{
 		return false;
 	}
 
+	sort(){
+		var idEl = -1;
+		// var self = this;
+		$(this.el).attr("sort-from", idEl);
+		// var heightOff = 0;
+		for (var i = 0; i < this.items.length; i++){
+			var item = this.items[i];
+			if (this.fact.item.el.get(0) === item.el) continue;
+			$(item.el).attr("style", "");
+			if (item.isHover){
+				idEl = i;
+				var heightOff = $(item.el).outerHeight() * 1;
+				$(this.el).attr("sort-from", idEl);
+				var curGroupItems = $(this.el).find(".item");
+				var curIdx = $(curGroupItems).index(item.el);
+				var nextAllEl = curIdx - 1 < 0 ? $(this.el).find("." + this.config.item + ":not(." + "active" + ")")
+					: $($(this.el).find(".item")[curIdx - 1]).nextAll("." + this.config.item + ":not(." + "active" + ")");
+				$(nextAllEl).css({
+					position: "relative",
+					top: heightOff + "px"
+				});
+				break;
+			}
+		}
+	}
+
 }
 
 
@@ -87,44 +117,37 @@ class Item extends extendDrag{
 		this.oriX = 0;
 		this.oriY = 0;
 		this.offset = {
-			left: $(this.el).css("left").replace("px", "") * 1 || 0,
-			top: $(this.el).css("top").replace("px", "") * 1 || 0
+			left: $(this.el).css("left") ? $(this.el).css("left").match(/[-\d]+/g) * 1 || 0 : 0,
+			top: $(this.el).css("top") ? $(this.el).css("top").match(/[-\d]+/g) * 1 || 0 : 0
 		};
 		
 		this.obj = {
 			idGroup: 0,
 			isTransfer: false
 		}
-
-		// this.addEventListenner("out");
-
 	}
 
 	get item(){
 		return this.el;
 	}
 
-	addEventListenner(event){
-		switch(event){
-			case "out":
-				$(this.el).on("out", function(){
-					$(this.parent.el).removeClass(this.config.active);
-					$(this.el).removeClass("active");
-					if (this.obj.isTransfer){
-						$(this.el).attr("style", "");
-						$(this.fact.groups[this.obj.idGroup].el).append(this.el);
-						$(this.fact.groups[this.obj.idGroup].el).removeClass(this.config.active);
-					}
-					else{
-						$(this.el).attr("style", "");
-					}
-				}.bind(this));
-			break;
+	updateEl(){
+		$(this.parent.el).removeClass(this.config.active);
+		$(this.el).removeClass("active");
+		if (this.obj.isTransfer){
+			$(this.el).attr("style", "");
+			var activeGroup = this.fact.groups[this.obj.idGroup].el;
+			var items = $(activeGroup).find("." + this.config.item);
+			var id = $(activeGroup).attr("sort-from") * 1;
+			$(items).attr("style", "");
+			$(activeGroup).removeClass(this.config.active);
+			if (id < 0) return activeGroup.append(this.el);
+			if (id === 0) return $(this.el).insertBefore(items[0]);
+			if (id > 0) return $(this.el).insertAfter($(items[id - 1]));
 		}
-	}
-
-	removeListennerEvent(event){
-		$(this.el).off(event);
+		else{
+			$(this.el).attr("style", "");
+		}
 	}
 
 	moveAt(x, y){
@@ -134,21 +157,50 @@ class Item extends extendDrag{
 		for (var i = 0 ; i < groups.length; i++){
 			$(groups[i].el).removeClass(this.config.active);
 			if (groups[i].isHover){
+				// console.log("here", groups[i])
 				this.obj.isTransfer = true;
 				this.obj.idGroup = i;
 				$(groups[i].el).addClass(this.config.active);
+				groups[i].sort()
 			}
+			else{
+				$($(groups[i].el).find("." + this.config.item + ":not(." + "active" + ")" 	)).attr("style", "");
+			}
+
 		}
 		// this.fact.groups.f
 	}
 
-	isHover(x, y){
+	isMove(x, y){
 		if ((x > this.left && x < this.right) && (y > this.top && y < this.bottom)){
 			this.oriX = x;
 			this.oriY = y;
 			$(this.parent.el).addClass(this.config.active);
 			return true;
 		}
+		return false;
+	}
+
+	get isHover(){
+		// console.log(this, this.fact.item);
+		// TH1: 
+		var item = this.fact.item;
+		var xCount = 0, yCount = 0;
+		if (item.right > this.left && item.right < this.right) xCount++;
+
+		if (item.left < this.right && item.left > this.left) xCount++;
+
+		if (item.left > this.left && item.right < this.right) xCount++;
+
+		if (item.bottom > this.top && item.bottom < this.bottom) yCount++;
+
+		if (item.top < this.bottom && item.top > this.top) yCount++;
+
+		if (item.top > this.top && item.bottom < this.bottom) yCount++;
+
+		// console.log("xCount yCount: ", xCount, yCount);
+		// $(".text").text(xCount + " - " + yCount);
+		if (xCount >= 1 && yCount >= 1) {return true}
 		return false;
 	}
 }
@@ -186,7 +238,7 @@ class factory{
 		$(window).mousedown(function(e){
 			 $(".item").each(function(){
 			 	var el = new Item(self, this);
-			 	if (el.isHover(e.clientX, e.clientY)) {
+			 	if (el.isMove(e.clientX, e.clientY)) {
 			 		// console.log(el.parent, "parent here");
 			 		self.el = el;
 			 		$(self.el.item).addClass("active");
@@ -195,9 +247,7 @@ class factory{
 	})
 
 		$(window).mouseup(function(){
-			self.el.addEventListenner("out");
-			$(self.el.item).trigger("out");
-			self.el.removeListennerEvent("out");
+			self.el.updateEl();
 			self.el = "";
 		})
 	}
